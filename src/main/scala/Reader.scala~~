@@ -1,0 +1,233 @@
+package org.littlewings.scopt.example
+
+import scwc._
+import weka.core.Instances
+import weka.core.converters.ArffSaver
+import weka.core.converters.ConverterUtils.DataSource
+import weka.core.Instances
+import weka.filters.Filter
+import weka.filters.unsupervised.attribute.Remove
+import scala.collection.mutable.{HashMap,HashSet,ArrayBuffer}
+import scala.collection.JavaConversions._
+import java.text.DecimalFormat
+import java.io.File
+import scopt.OptionParser
+
+case class MainOption(
+  algorithm: String = "cwc",
+  sort: String = "su",
+  measure: String = "br",
+  threshold: Double = 0.0,
+  in: String = "",
+  out: String = "",
+  log: String = "hi")
+
+case class ARFFReader(filename: String) {
+  var instances = new DataSource(filename).getDataSet
+
+  // println
+  // println("DEBUG>>")
+  // println("instances.enumerateInstances = ")
+  // // instances.enumerateInstances.foreach(println(_))
+  // println(instances.enumerateInstances.toList(0))
+  // println("<<DEBUG")
+
+  val attr2index = HashMap[Symbol,Int]()
+  val index2attr = HashMap[Int,Symbol]()
+  (0 until instances.numAttributes).foreach {index =>
+    attr2index += Symbol(instances.attribute(index).name) -> index
+    index2attr += index -> Symbol(instances.attribute(index).name)
+  }
+
+  val numInstances  = instances.numInstances
+  val numAttrs = instances.numAttributes
+  val sparse_instances = sparseInstances
+
+  def sparseInstances = {
+    instances.enumerateInstances.map { instance =>
+      val n = instance.numValues
+      val body: ArrayBuffer[(Symbol, Int)] =
+        for(i <- (0 until n - 1 ).to[ArrayBuffer]
+          if instance.value(instance.index(i)).toInt != 0) yield {
+          val attr_sym = Symbol(instance.attribute(instance.index(i)).name)
+          Pair(attr_sym, instance.value(instance.index(i)).toInt)
+        }
+      val temp_sym = Symbol(instance.attribute(instance.index(n - 1)).name)
+      if(temp_sym == index2attr(instances.numAttributes - 1)) {
+        (body, instance.value(instance.index(n - 1)).toInt)
+      } else {
+        body += Pair(temp_sym, instance.value(instance.index(n - 1)).toInt)
+        (body, 0)
+      }
+    }
+  }
+
+  // def sparseInstances = {
+  //   instances.enumerateInstances.map { instance =>
+  //     val n = instance.numValues
+  //     val body: ArrayBuffer[(Symbol, Int)] =
+  //       (0 until n - 1 ).to[ArrayBuffer].map { i:Int =>
+  //         val attr_sym = Symbol(instance.attribute(instance.index(i)).name)
+  //         //        attr2index(attr_sym)=i
+  //         Pair(attr_sym, instance.value(instance.index(i)).toInt)
+  //       }
+  //     val temp_sym = Symbol(instance.attribute(instance.index(n - 1)).name)
+  //     if(temp_sym == index2attr(instances.numAttributes - 1)) {
+  //       (body, instance.value(instance.index(n - 1)).toInt)
+  //     } else {
+  //       body += Pair(temp_sym, instance.value(instance.index(n - 1)).toInt)
+  //       (body, 0)
+  //     }
+  //   }
+  // }
+
+  def removeUnselectedAttrs(selected_attrs: List[Symbol]) {
+    val remove_list =
+      ((for (attr <- selected_attrs if attr != HIDDEN) yield (attr2index(attr))) ::: List(instances.numAttributes - 1)).toArray
+
+    val filter = new Remove()
+    filter.setAttributeIndicesArray(remove_list)
+
+
+    filter.setInvertSelection(true)
+    filter.setInputFormat(instances)
+    instances = Filter.useFilter(instances, filter)
+  }
+
+  def saveArffFile (output_file_name: String) {
+    val arff_saver = new ArffSaver()
+    arff_saver.setInstances(instances)
+    arff_saver.setFile(new File(output_file_name))
+    arff_saver.writeBatch()
+  }
+}
+
+object Main {
+
+  def main(args: Array[String]) {
+
+    val parser = new OptionParser[MainOption]("Super CWC & Super LCC") {
+      opt[String]('i', "input") required() valueName("<path>") action { (x, o) =>
+        o.copy(in = x)
+      } text("A path to an input ARFF file with the extension .arff")
+
+      opt[String]('o', "output") valueName("<path>") action { (x, o) =>
+        o.copy(out = x)
+      } text("A path to an output ARFF file with the extension .arff")
+
+      opt[String]('a', "algorithm") valueName("<cwc,lcc>") action { (x, o) =>
+        o.copy(algorithm= x)
+      } text("A feature selection algorithm: cwc (default) or lcc")
+
+      opt[String]('s', "sort") valueName("<su,mi,br,mc>") action { (x, o) =>
+        o.copy(sort = x)
+      } text("A statistical measure to sort features: su (symmetric uncertainty, default), mi (mutual information), br (Bayesian risk), mc (Matthew's correlation coefficient)")
+
+      opt[String]('m', "measure") valueName("<br>") action { (x, o) =>
+        o.copy(measure = x)
+      } text("A statistical measure to select features: br (Bayes risk, default)")
+
+      opt[Double]('t', "threshold") valueName("<value>") action { (x, o) =>
+        o.copy(threshold = x)
+      } text("Threshold: 0.0 (default)")
+
+      opt[String]('l', "log") valueName("<hi,lo,none>") action { (x, o) =>
+        o.copy(measure = x)
+      } text("Level of detail of log: hi (default), lo or none")
+    }
+
+    var algorithm = "cwc"
+    var sort = "su"
+    var measure = "br"
+    var threshold = 0.0
+    var in = ""
+    var out = ""
+    var log = "hi"
+
+    parser.parse(args, MainOption()) map { option =>
+      // 引数解析に成功した場合
+      algorithm = option.algorithm
+      sort = option.sort
+      measure = option.measure
+      threshold = option.threshold
+      in = option.in
+      out = option.out
+      log = option.log
+    } getOrElse {
+      // 引数解析に失敗した場合
+      // sys.exit(1)
+      // println(parser.usage)
+      return
+    }
+
+    println("\n*** Super CWC and Super LCC (Copy Rights 2015 K. Shin and T. Kuboyama)\n")
+
+    print(in  + " " + out  + " " + algorithm  + " " + sort  + " ")
+    println(measure  + " " + threshold  + " " + log  + " ")
+
+    print("Reading file ... ")
+    val db = ARFFReader(in)
+    val data = db.sparse_instances.to[ArrayBuffer]
+    println("finished.")
+    println("   # of instances:  "+db.numInstances)
+    println("   # of attributes: "+db.numAttrs)
+    println("found.")
+  }
+}
+    // val sort_selector = Map("su" -> 0, "mi" -> 1, "br" -> 2, "mc" -> 3)
+    // val ds = Dataset(data, sort_selector(sort))
+
+    // // println("DEBUG>>")
+    // // println("data = ")
+    // // // data.foreach(println(_))
+    // // println(data(1))
+    // // println("<<DEBUG")
+
+    // val result = ds.select(threshold)
+
+    // // println("DEBUG>>")
+    // // println("Count the occurences of (attr_value, class_label)")
+    // // ds.ofc.foreach(x => println(x))
+    // // println("Count the occurences of attribute values")
+    // // ds.of.foreach(x => println(x))
+    // // println("Count the occurences of class labels")
+    // // ds.oc.foreach(x => println(x))
+    // // ds.displayStats(None)
+    // // println("The result of attribute sorting")
+    // // // val f = new DecimalFormat("0.00")
+    // // //   (0 until ds.rn.size).foreach {i =>
+    // // //     if(ds.nr(i) != HIDDEN)
+    // // //       print(ds.nr(i) + "(" + f.format(ds.msr(sl)(ds.nr(i))) + ") ")
+    // // //   }
+    // // // println
+    // // val f = new DecimalFormat("0.00")
+    // //   (0 until 30).foreach {i =>
+    // //     if(ds.nr(i) != HIDDEN)
+    // //       print(ds.nr(i) + "(" + f.format(ds.msr(sl)(ds.nr(i))) + ") ")
+    // //   }
+    // // println
+    // // println("<<DEBUG")
+
+
+    // db.removeUnselectedAttrs(result)
+    // db.saveArffFile(out)
+
+
+    // println("\nSelected attributes: feature name (score and rank in " + ds.slm(sl) + ")")
+    // for (attr <- result if attr!=HIDDEN) {
+    //   print(f"$attr(${ds.msr(sl)(attr)}%.3f, ${ds.rn(attr) + 1}) ")
+    // }
+    // println
+    // println
+    // println("Statistics")
+    // for(x <- (0 to 3) if x != sort_selector(sort)) {
+    //   println("Scores in　" + ds.slm(x) + ":")
+    //   for (attr <- result if attr!=HIDDEN) {
+    //     print(f"$attr(${ds.msr(x)(attr)}%.3f) ")
+    //   }
+//       println
+//     }
+//   }
+// }
+
+
