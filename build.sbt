@@ -11,9 +11,13 @@ libraryDependencies += "nz.ac.waikato.cms.weka" % "weka-dev" % "3.7.12"
 //  "org.scala-lang.modules" %% "scala-swing" % "1.0.1",
 
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.7.0"
-
 resolvers += Resolver.sonatypeRepo("public")
+javacOptions ++= Seq("-source", "11", "-target", "11")
 
-resolvers += Resolver.sonatypeRepo("public")
-
-libraryDependencies += "com.github.scopt" %% "scopt" % "3.2.0"
+assemblyMergeStrategy in assembly := {
+ case PathList("META-INF", _*) => MergeStrategy.discard
+ case _                        => MergeStrategy.first
+}
+// test
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.19"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test"
