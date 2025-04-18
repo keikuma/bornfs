@@ -84,7 +84,6 @@ object Main {
 
   val f = new DecimalFormat("0.0000")
   val fns = new DecimalFormat("#,### nsec")
-
   def main(args: Array[String]) {
 
     val parser = new OptionParser[MainOption]("Born Feature Selection") {
