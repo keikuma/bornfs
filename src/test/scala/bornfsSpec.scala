@@ -8,6 +8,7 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   
   var result: Seq[scwc.Attr] = _
   var selected_attrs: List[Symbol] = _
+  val expected_attrs: List[Symbol] = List('a, 'c, 'f)
 
   override def beforeAll(): Unit = {
     val path: String = "data/test.arff"
@@ -29,11 +30,11 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     selected_attrs = result.map{i => data.index2attr(i)}.toList
   }
 
-  test("dummy test - Confirmation of test data input") {
+  test("selected features for test.arff are stable") {
     println
     println(result.size + " features have been selected.")
     println
     println("Selected features are: " + selected_attrs.mkString(" "))
-    assert(true)
+    selected_attrs shouldBe expected_attrs
   }
 }
