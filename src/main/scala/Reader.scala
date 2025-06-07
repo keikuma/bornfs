@@ -8,7 +8,8 @@ import weka.filters.Filter
 import weka.filters.unsupervised.attribute.Remove
 
 import scala.collection.mutable.{HashMap,HashSet,ArrayBuffer}
-import scala.collection.JavaConversions._
+import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 
 import java.text.DecimalFormat
 import java.io.{File, OutputStreamWriter, FileOutputStream}
@@ -41,25 +42,25 @@ case class ARFFReader(filename: String) {
   val sparse_instances = sparseInstances
 
   def sparseInstances = {
-    instances.enumerateInstances.map { instance =>
+    instances.enumerateInstances().asScala.map { instance =>
       val n = instance.numValues
       val body: ArrayBuffer[(Symbol, Int)] =
-        for(i <- (0 until n - 1 ).to[ArrayBuffer]
+        for(i <- (0 until n - 1).to(mutable.ArrayBuffer)
           if instance.value(instance.index(i)).toInt != 0) yield {
           val attr_sym = Symbol(instance.attribute(instance.index(i)).name)
-          Pair(attr_sym, instance.value(instance.index(i)).toInt)
+          (attr_sym, instance.value(instance.index(i)).toInt)
         }
       val temp_sym = Symbol(instance.attribute(instance.index(n - 1)).name)
       if(temp_sym == index2attr(instances.numAttributes - 1)) {
         (body, instance.value(instance.index(n - 1)).toInt)
       } else {
-        body += Pair(temp_sym, instance.value(instance.index(n - 1)).toInt)
+        body += ((temp_sym, instance.value(instance.index(n - 1)).toInt))
         (body, 0)
       }
     }
   }
 
-  def removeUnselectedAttrs(selected_attrs: List[Symbol]) {
+  def removeUnselectedAttrs(selected_attrs: List[Symbol]): Unit = {
     val remove_list =
       ((for (attr <- selected_attrs) yield (attr2index(attr))) ::: List(instances.numAttributes - 1)).toArray
 
@@ -72,7 +73,7 @@ case class ARFFReader(filename: String) {
     instances = Filter.useFilter(instances, filter)
   }
 
-  def saveArffFile (output_file_name: String) {
+  def saveArffFile(output_file_name: String): Unit = {
     val arff_saver = new ArffSaver()
     arff_saver.setInstances(instances)
     arff_saver.setFile(new File(output_file_name))
@@ -84,38 +85,38 @@ object Main {
 
   val f = new DecimalFormat("0.0000")
   val fns = new DecimalFormat("#,### nsec")
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
 
     val parser = new OptionParser[MainOption]("Born Feature Selection") {
-      opt[String]('i', "input") required() valueName("<path>") action { (x, o) =>
+      opt[String]('i', "input").required().valueName("<path>").action { (x, o) =>
         o.copy(in = x)
       } text("A path to an input ARFF file without extension .arff")
 
-      opt[String]('o', "output") valueName("<path>") action { (x, o) =>
+      opt[String]('o', "output").valueName("<path>").action { (x, o) =>
         o.copy(out = x)
       } text("A path to an output ARFF file")
 
-      opt[String]('s', "sort") valueName("<ratio, noise, relevance, difference, harmonic>") action { (x, o)  =>
+      opt[String]('s', "sort").valueName("<ratio, noise, relevance, difference, harmonic>").action { (x, o)  =>
         o.copy(sort = x)
       } text("A measure to sort features")
 
-      opt[Double]('t', "threshold") valueName("<value>") action { (x, o) =>
+      opt[Double]('t', "threshold").valueName("<value>").action { (x, o) =>
         o.copy(threshold = x)
       } text("Threshold: 1.0 (default)")
 
-      opt[Int]('h', "hop") valueName("<value>") action { (x, o) =>
+      opt[Int]('h', "hop").valueName("<value>").action { (x, o) =>
         o.copy(hop = x)
       } text("Threshold: 1.0 (default)")
 
-      opt[String]('l', "log") valueName("<high,low,none>") action { (x, o) =>
+      opt[String]('l', "log").valueName("<high,low,none>").action { (x, o) =>
         o.copy(log = x)
       } text("Level of detail of log: high, low (default) or none")
 
-      opt[Boolean]('T', "tutorial") valueName("<true,false>") action { (x, o) =>
+      opt[Boolean]('T', "tutorial").valueName("<true,false>").action { (x, o) =>
         o.copy(tutorial = x)
       } text("Tutorial mode: true or false (default)")
 
-      opt[Boolean]('v', "verbose") valueName("<true,false>") action { (x, o) =>
+      opt[Boolean]('v', "verbose").valueName("<true,false>").action { (x, o) =>
         o.copy(verbose = x)
       } text("Verbose mode: true (default) or false")
     }
@@ -129,40 +130,37 @@ object Main {
     var tutorial = false
     var verbose = true
 
-    parser.parse(args, MainOption()) map { option =>
-      // 引数解析に成功した場合
-      in = option.in
-      // inWOext = option.in
-      // in = inWOext + ".arff"
-      out = option.out
-      threshold = option.threshold
-      hop = option.hop
-      sort = option.sort match {
-        case "ratio" => 0
-        case "noise" => 1
-        case "relevance" => 2
-        case "difference" => 3
-        case "harmonic" => 4
-        case _ =>
-          println("Wrong specification " + sort)
-          println(parser.usage)
-          return
-      }
-      log = option.log
-      log match {
-        case "high" => // Do nothing
-        case "low" => // Do nothing
-        case "none" => // Do nothing
-        case _ => //
-          println("Wrong specification " + log)
-          println(parser.usage)
-          return
-      }
-      tutorial = option.tutorial
-      verbose = option.verbose
-    } getOrElse {
-      // 引数解析に失敗した場合
-      return
+    parser.parse(args, MainOption()) match {
+      case Some(option) =>
+        in = option.in
+        out = option.out
+        threshold = option.threshold
+        hop = option.hop
+        sort = option.sort match {
+          case "ratio" => 0
+          case "noise" => 1
+          case "relevance" => 2
+          case "difference" => 3
+          case "harmonic" => 4
+          case _ =>
+            println("Wrong specification " + sort)
+            println(parser.usage)
+            return
+        }
+        log = option.log
+        log match {
+          case "high" =>
+          case "low"  =>
+          case "none" =>
+          case _ =>
+            println("Wrong specification " + log)
+            println(parser.usage)
+            return
+        }
+        tutorial = option.tutorial
+        verbose = option.verbose
+      case None =>
+        return
     }
 
 
@@ -199,8 +197,9 @@ object Main {
 
     print("Reading the file ... ")
     val db = ARFFReader(in)
-    val data = db.sparse_instances.to[ArrayBuffer].map{x =>
-      (x._1.map{y => (db.attr2index(y._1), y._2)}, x._2)}
+    val data = db.sparse_instances.to(mutable.ArrayBuffer).map { x =>
+      (x._1.map(y => (db.attr2index(y._1), y._2)), x._2)
+    }.toSeq
     println("finished.")
     println("Found "+db.numInstances+" instances and "+db.numAttrs+" features including class.")
 
@@ -348,17 +347,18 @@ object Main {
       log_file.write("## sortAttrs:time:#_features\n")
       log_file.write("## sortCases:time:#_features\n")
       log_file.write("## findBorder:time:#_features\n")
-      log_file.write(ds.events.map(e => e._1 + ":" + e._2.mkString(":")).mkString(""," ","\n"))
+        log_file.write(ds.events.map(e => e._1.name + ":" + e._2.mkString(":"))
+          .mkString("", " ", "\n"))
 
       if(log == "high") {
         log_file.write("\n# Miscellany\n\n")
         log_file.write("## Entropy of features\n")
-        log_file.write((0 to ds.maxAttr).map{i =>
-          db.index2attr(i) + ":" + f.format(ds.entropyAttr(i))}.mkString(" "))
+          log_file.write((0 to ds.maxAttr).map{i =>
+            db.index2attr(i).name + ":" + f.format(ds.entropyAttr(i))}.mkString(" "))
         log_file.write("\n\n")
         log_file.write("## Entropy of features and labels\n")
-        log_file.write((0 to ds.maxAttr).map{i =>
-          db.index2attr(i) + ":" + f.format(ds.entropyAttrLabel(i))}.mkString(" "))
+          log_file.write((0 to ds.maxAttr).map{i =>
+            db.index2attr(i).name + ":" + f.format(ds.entropyAttrLabel(i))}.mkString(" "))
         log_file.write("\n\n")
       }
       log_file.close()
