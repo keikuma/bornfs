@@ -26,11 +26,11 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     selected_attrs = result.map{i => data.index2attr(i)}.toList
   }
 
-  test("dummy test - Confirmation of test data input") {
+  test("selected attributes should be a, c, and f") {
     println
     println(result.size + " features have been selected.")
     println
     println("Selected features are: " + selected_attrs.mkString(" "))
-    assert(true)
+    selected_attrs shouldEqual List('a, 'c, 'f)
   }
 }
