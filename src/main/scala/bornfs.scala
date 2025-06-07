@@ -112,11 +112,14 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
       val x = this.window(i)
       val y = that.window(i)
       if(x._1 <= index) {
-        x._1 - y._1 match {
-          case diff if diff < 0 => return 1
-          case diff if diff > 0 => return -1
-          case _ => i += 1
-        }
+        if(y._1 > index) return 1
+        val diffIndex = x._1 - y._1
+        if(diffIndex < 0) return -1
+        if(diffIndex > 0) return 1
+        val diffValue = x._2 - y._2
+        if(diffValue < 0) return -1
+        if(diffValue > 0) return 1
+        i += 1
       } else {
         return if(y._1 <= index) -1 else 0
       }
