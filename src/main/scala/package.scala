@@ -7,7 +7,7 @@ package object scwc {
     (result, micros)
   }
 
-  type Attr = Int 
+  type Attr = Int
   type Index = Int
-  type Value = Int 
+  type Value = Int
 }

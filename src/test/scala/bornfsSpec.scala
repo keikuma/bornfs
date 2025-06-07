@@ -4,7 +4,7 @@ import org.scalatest.matchers.should.Matchers
 import scala.collection.mutable.ArrayBuffer
 
 class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
-  
+
   var result: Seq[scwc.Attr] = _
   var selected_attrs: List[Symbol] = _
 
@@ -17,10 +17,10 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     var verbose: Boolean = true
     var hop: Int= 1
     var threshold: Double = 1.0
-    val mapdata: ArrayBuffer[Tuple2[ArrayBuffer[Tuple2[Int, Int]], Int]] = data.sparse_instances.to[ArrayBuffer].map{x =>
+    val mapdata: ArrayBuffer[Tuple2[ArrayBuffer[Tuple2[Int, Int]], Int]] = data.sparse_instances.to(ArrayBuffer).map{x =>
       (x._1.map{y => (data.attr2index(y._1), y._2)}, x._2)}
     println(mapdata)
-    val ds: Dataset = Dataset(mapdata, sort, tutorial, verbose)
+    val ds: Dataset = Dataset(mapdata.toSeq, sort, tutorial, verbose)
     println("=== ready test data ===")
     result = ds.select(threshold, hop)
     selected_attrs = result.map{i => data.index2attr(i)}.toList

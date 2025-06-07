@@ -1,6 +1,7 @@
 import scwc._
 import collection.mutable.{ArrayBuffer, HashMap}
 import java.text.DecimalFormat
+import scala.collection.parallel.CollectionConverters._
 
 
 case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val frq: Int) {
@@ -81,7 +82,7 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
   }
 
 
-  def renumber(order: Array[Index]) {
+  def renumber(order: Array[Index]) = {
     /*
      order(i)は、現在のwindow中のインデックスiの特徴の、新たなwindowにおけるインデックス
      orderは、0, ..., rs-1の順列
@@ -163,7 +164,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     }
   }
 
-  val data = temp_dict.par.map{x => Case(x._1._1, x._1._2, x._2)}.to[ArrayBuffer]
+  val data = temp_dict.par.map{x => Case(x._1._1, x._1._2, x._2)}.to(ArrayBuffer)
   val maxAttr = data.par.map(_.row).par.flatMap{x => x.map(_._1)}.max
   val maxVal = (0 to maxAttr).par.map{a => data.map(_(a)).max}
   val maxLabel = data.par.map(_.classLabel).max
@@ -202,7 +203,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("- label>[l] indicates a class label l;")
     println("- frq>[n] indicates an occurrence frequency n.")
   }
-  
+
   def log2(x: Double): Double = math.log(x)/math.log(2)
   def xlog2(x: Double): Double = if(x == 0) 0 else x*log2(x)
 
@@ -275,7 +276,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
   val entropyEntire = count.values.filter(_ > 0).par.map{x => -x*log2(x)}.sum/nSamples + log2(nSamples)
 
-  
+
   count = HashMap[String, Int]()
   for(c <- data) {
     val pttn = c.serialize + "=" + c.classLabel
@@ -285,7 +286,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       count(pttn) = c.frq
     }
   }
-  
+
   val entropyEntireLabel = count.values.filter(_ > 0).par.map{x => -x*log2(x)}.sum/nSamples + log2(nSamples)
 
 
@@ -316,15 +317,15 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       f.format(miEntireLabel) + ".")
   }
 
-  def initializePrefix {
+  def initializePrefix = {
     prefix = ArrayBuffer[Attr]()
     partitions = Array[Seq[Int]](0 until nCases)
     entropyPrefix = 0.0
     entropyPrefixLabel = entropyLabel
   }
 
-  
-  def addPrefix(index: Index) {
+
+  def addPrefix(index: Index) = {
     prefix += index
     lim = index - 1
 
@@ -335,8 +336,8 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     partitions = partitions.par.map{p =>
       val temp = Vector.fill(maxVal(entity(index))+1)(ArrayBuffer[Int]())
       for(i <- p) temp(data(i)(index)) += i
-      temp.filter(_.size > 0)
-    }.flatMap(x => x).toArray
+      temp.filter(_.nonEmpty).flatMap(_.toSeq)
+    }.toArray
     val tmp = entropyPrefixPlusUntil(-1)
     entropyPrefix = tmp._1
     entropyPrefixLabel = tmp._2
@@ -344,8 +345,8 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
   def nSamples(indices: Seq[Int]): Int = indices.foldLeft(0)(_+data(_).frq)
 
-  def sortCases {
-    
+  def sortCases = {
+
     /*
      partitionごとに、[0,lim]の属性のの辞書式順序にcaseをソート
      ソートした結果でpartitionsを更新
@@ -368,17 +369,17 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
   }
 
   def findBorder(delta: Double, lim: Index): Int = {
-    
+
     /*
      I(attrs[i, attrs.size-1], prefix; C) >= delta I(entire, C) が成り立つ
      最大のiをbinary searchで探索して、出力する。
-     
+
      以下では、
-     I(attrs[u, attrs.size-1], prefix; C) < delta I(entire; C) 
-     I(attrs[l, attrs.size-1], prefix; C) >= delta I(entire; C) 
+     I(attrs[u, attrs.size-1], prefix; C) < delta I(entire; C)
+     I(attrs[l, attrs.size-1], prefix; C) >= delta I(entire; C)
      が成り立つように、l(ower)とu(pper)を制御
 
-     I(attrs[attrs.size, attrs.size-1], prefix; C) >= delta I(entire; C) 
+     I(attrs[attrs.size, attrs.size-1], prefix; C) >= delta I(entire; C)
      をチェックし、成り立てば、u = attrs.size と初期化する。
      */
 
@@ -393,12 +394,12 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     var l = -1
 
     /*
-     I([0, lim], prefix; C) >= delta I(entire; C) 
+     I([0, lim], prefix; C) >= delta I(entire; C)
      は成り立つものと仮定できるので、u = lim と初期化する。
      */
 
     var u = lim
-    
+
     while(true) {
       if(l + 1 == u) return u
       val c = (l + u)/2
@@ -412,7 +413,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       }
     }
     // エラーを回避するためのダミー出力
-    
+
     return 0
   }
 
@@ -556,7 +557,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         order = tempResult._2
 
         ellapsed_t = System.nanoTime() - start
-        events += Pair('sortAttrs, Array(ellapsed_t, lim))
+        events += (Symbol("sortAttrs") -> Array(ellapsed_t, lim))
         timeSortFeatures += ellapsed_t
 
         start = System.nanoTime()
@@ -564,14 +565,14 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         sortCases
 
         ellapsed_t = System.nanoTime() - start
-        events += Pair('sortCases, Array(ellapsed_t, lim))
+        events += (Symbol("sortCases") -> Array(ellapsed_t, lim))
         timeSortInstances += ellapsed_t
       } else if (tutorial) {
         println("This iteration does not perform sorting features.")
       }
 
       it_count += 1
-      
+
       if(tutorial) {
         println("The iteration is also associated with one or more partitions.")
         println("Each case object of the dataset belongs to exactly one partition.")
@@ -612,7 +613,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       val i = findBorder(delta, lim)
 
       ellapsed_t = System.nanoTime() - start
-      events += Pair('findBorder, Array(ellapsed_t, lim))
+      events += (Symbol("findBorder") -> Array(ellapsed_t, lim))
       timeSelectFeatures += ellapsed_t
 
       if(i < 0) {
@@ -625,7 +626,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           println("<< Tutorial finishes.  Thank you!")
         }
 
-        return prefix
+        prefix.toSeq
       } else {
         addPrefix(i)
 
@@ -653,7 +654,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
             println("<< Tutorial finishes.  Thank you!")
           }
 
-          return prefix.map(entity(_))
+          prefix.map(entity(_)).toSeq
         }
       }
     }
