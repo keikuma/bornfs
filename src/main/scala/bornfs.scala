@@ -658,5 +658,6 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         }
       }
     }
+    Seq[Attr]()
   }
 }
