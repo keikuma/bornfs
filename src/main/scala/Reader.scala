@@ -3,7 +3,6 @@ import scwc._
 import weka.core.Instances
 import weka.core.converters.ArffSaver
 import weka.core.converters.ConverterUtils.DataSource
-import weka.core.Instances
 import weka.filters.Filter
 import weka.filters.unsupervised.attribute.Remove
 
