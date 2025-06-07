@@ -626,7 +626,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           println("<< Tutorial finishes.  Thank you!")
         }
 
-        prefix.toSeq
+        return prefix.toSeq
       } else {
         addPrefix(i)
 
@@ -654,10 +654,9 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
             println("<< Tutorial finishes.  Thank you!")
           }
 
-          prefix.map(entity(_)).toSeq
+          return prefix.map(entity(_)).toSeq
         }
       }
     }
-    Seq[Attr]()
   }
 }
