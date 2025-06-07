@@ -105,7 +105,7 @@ object Main {
 
       opt[Int]('h', "hop").valueName("<value>").action { (x, o) =>
         o.copy(hop = x)
-      } text("Threshold: 1.0 (default)")
+      } text("Hop interval: 1 (default)")
 
       opt[String]('l', "log").valueName("<high,low,none>").action { (x, o) =>
         o.copy(log = x)
