@@ -1,6 +1,6 @@
 # BornFS
 
-![Scala](https://img.shields.io/badge/Scala-2.12-red.svg)
+![Scala](https://img.shields.io/badge/Scala-3-red.svg)
 
 ## Overview
 
@@ -16,7 +16,7 @@ It efficiently selects a subset of relevant features from a large dataset while 
 ## Prerequisites
 
 Ensure you have the following installed before running the project:
-- Scala `2.12.x`
+- Scala `3.x`
 - Java `JDK 11`
 - [SBT](https://www.scala-sbt.org/) (Scala Build Tool)
 
@@ -27,15 +27,17 @@ Ensure you have the following installed before running the project:
 ```sh
 git clone https://github.com/yourusername/bornfs.git
 cd bornfs
-sbt run -i xxx
+sbt run -i data/test.arff
 ```
+
+The `-i` option requires the complete ARFF file name.
 
 ## Tutorial
 
 To learn how the algorithm works, use the following command:
 
 ```sh
-sbt> run -T true -i test
+sbt> run -T true -i data/test.arff
 ```
 
 ## Reference

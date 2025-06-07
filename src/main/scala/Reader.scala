@@ -89,7 +89,7 @@ object Main {
     val parser = new OptionParser[MainOption]("Born Feature Selection") {
       opt[String]('i', "input").required().valueName("<path>").action { (x, o) =>
         o.copy(in = x)
-      } text("A path to an input ARFF file without extension .arff")
+      } text("Complete ARFF file name, e.g., data/test.arff")
 
       opt[String]('o', "output").valueName("<path>").action { (x, o) =>
         o.copy(out = x)
