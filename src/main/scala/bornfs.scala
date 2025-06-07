@@ -141,6 +141,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
   val f = new DecimalFormat("0.0000")
   val fsn = new DecimalFormat("#,### nsec")
   val very_large = 1000.0
+  val epsilon = 1e-8
 
 
   // To record function calls executed for profiling.
@@ -386,7 +387,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
      をチェックし、成り立てば、u = attrs.size と初期化する。
      */
 
-    if(ratio(-1) >= delta) {
+    if(ratio(-1) >= delta - epsilon) {
       return -1
     }
 
@@ -409,7 +410,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
       if(!tutorial && verbose) print(".")
 
-      if(ratio(c) < delta) {
+      if(ratio(c) < delta - epsilon) {
         l = c
       } else {
         u = c
@@ -421,7 +422,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
   }
 
   def isZero(x: Double): Boolean = {
-    return if(math.abs(x) <= 1e-8) true else false
+    return if(math.abs(x) <= epsilon) true else false
   }
 
   def sortVal(index: Index): Double = {
