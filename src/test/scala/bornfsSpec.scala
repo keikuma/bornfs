@@ -2,6 +2,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.should.Matchers
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   
@@ -17,8 +18,10 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     var verbose: Boolean = true
     var hop: Int= 1
     var threshold: Double = 1.0
-    val mapdata: ArrayBuffer[Tuple2[ArrayBuffer[Tuple2[Int, Int]], Int]] = data.sparse_instances.to[ArrayBuffer].map{x =>
-      (x._1.map{y => (data.attr2index(y._1), y._2)}, x._2)}
+    val mapdata: Seq[(ArrayBuffer[(Int, Int)], Int)] =
+      data.sparse_instances.to(mutable.ArrayBuffer).map { x =>
+        (x._1.map(y => (data.attr2index(y._1), y._2)), x._2)
+      }.toSeq
     println(mapdata)
     val ds: Dataset = Dataset(mapdata, sort, tutorial, verbose)
     println("=== ready test data ===")
