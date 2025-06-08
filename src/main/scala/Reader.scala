@@ -337,8 +337,10 @@ object Main {
       val mis = ds.entropyPrefix + hc - ds.entropyPrefixLabel
       log_file.write("## I(Selected; C) = " + f.format(mis) + "\n")
       log_file.write("## H(Selected | C) = " + f.format(ds.entropyPrefix - mis) + "\n")
-      val muh = 2*mis/(ds.miEntireLabel + ds.entropyPrefix)
-      val mug = mis/math.sqrt(ds.miEntireLabel * ds.entropyPrefix)
+      val denomH = ds.miEntireLabel + ds.entropyPrefix
+      val denomG = ds.miEntireLabel * ds.entropyPrefix
+      val muh = if(denomH == 0.0) 0.0 else 2*mis/denomH
+      val mug = if(denomG == 0.0) 0.0 else mis/math.sqrt(denomG)
       log_file.write("## mu_H = " + f.format(muh) + "\n")
       log_file.write("## mu_G = " + f.format(mug) + "\n")
 
