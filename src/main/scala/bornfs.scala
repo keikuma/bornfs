@@ -160,13 +160,15 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("Let's learn about how BornFS works.")
   }
 
-  var temp_dict = collection.mutable.Map[(ArrayBuffer[(Attr, Value)], Value), Int]()
-  for(x <- raw_data) {
-    val y = (x._1.sortWith(_._1 < _._1), x._2)
-    if(temp_dict.isDefinedAt(y)) {
-      temp_dict(y) += 1
+  // Aggregate identical cases while ensuring each case's feature list is
+  // consistently ordered by attribute index.
+  val temp_dict = collection.mutable.Map[(ArrayBuffer[(Attr, Value)], Value), Int]()
+  for (x <- raw_data) {
+    val orderedCase = (x._1.sortBy(_._1), x._2)
+    if (temp_dict.isDefinedAt(orderedCase)) {
+      temp_dict(orderedCase) += 1
     } else {
-      temp_dict(y) = 1
+      temp_dict(orderedCase) = 1
     }
   }
 
@@ -209,7 +211,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("- label>[l] indicates a class label l;")
     println("- frq>[n] indicates an occurrence frequency n.")
   }
-  
+
   def log2(x: Double): Double = math.log(x)/math.log(2)
   def xlog2(x: Double): Double = if(x == 0) 0 else x*log2(x)
 
@@ -282,7 +284,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
   val entropyEntire = count.values.filter(_ > 0).par.map{x => -x*log2(x)}.sum/nSamples + log2(nSamples)
 
-  
+
   count = HashMap[String, Int]()
   for(c <- data) {
     val pttn = c.serialize + "=" + c.classLabel
@@ -292,7 +294,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       count(pttn) = c.frq
     }
   }
-  
+
   val entropyEntireLabel = count.values.filter(_ > 0).par.map{x => -x*log2(x)}.sum/nSamples + log2(nSamples)
 
 
@@ -330,7 +332,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     entropyPrefixLabel = entropyLabel
   }
 
-  
+
   def addPrefix(index: Index): Unit = {
     prefix += index
     lim = index - 1
@@ -352,7 +354,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
   def nSamples(indices: Seq[Int]): Int = indices.foldLeft(0)(_+data(_).frq)
 
   def sortCases(): Unit = {
-    
+
     /*
      partitionごとに、[0,lim]の属性のの辞書式順序にcaseをソート
      ソートした結果でpartitionsを更新
@@ -375,17 +377,17 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
   }
 
   def findBorder(delta: Double, lim: Index): Int = {
-    
+
     /*
      I(attrs[i, attrs.size-1], prefix; C) >= delta I(entire, C) が成り立つ
      最大のiをbinary searchで探索して、出力する。
-     
+
      以下では、
-     I(attrs[u, attrs.size-1], prefix; C) < delta I(entire; C) 
-     I(attrs[l, attrs.size-1], prefix; C) >= delta I(entire; C) 
+     I(attrs[u, attrs.size-1], prefix; C) < delta I(entire; C)
+     I(attrs[l, attrs.size-1], prefix; C) >= delta I(entire; C)
      が成り立つように、l(ower)とu(pper)を制御
 
-     I(attrs[attrs.size, attrs.size-1], prefix; C) >= delta I(entire; C) 
+     I(attrs[attrs.size, attrs.size-1], prefix; C) >= delta I(entire; C)
      をチェックし、成り立てば、u = attrs.size と初期化する。
      */
 
@@ -400,12 +402,12 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     var l = -1
 
     /*
-     I([0, lim], prefix; C) >= delta I(entire; C) 
+     I([0, lim], prefix; C) >= delta I(entire; C)
      は成り立つものと仮定できるので、u = lim と初期化する。
      */
 
     var u = lim
-    
+
     while(true) {
       if(l + 1 == u) return u
       val c = (l + u)/2
@@ -419,7 +421,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       }
     }
     // エラーを回避するためのダミー出力
-    
+
     return 0
   }
 
@@ -578,7 +580,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       }
 
       it_count += 1
-      
+
       if(tutorial) {
         println("The iteration is also associated with one or more partitions.")
         println("Each case object of the dataset belongs to exactly one partition.")
