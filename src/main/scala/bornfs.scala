@@ -162,7 +162,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
   var temp_dict = collection.mutable.Map[(ArrayBuffer[(Attr, Value)], Value), Int]()
   for(x <- raw_data) {
-    val y = (x._1.sortWith(_._1 < _._1), x._2)
+    val y = (x._1.sortBy(_._1), x._2)
     if(temp_dict.isDefinedAt(y)) {
       temp_dict(y) += 1
     } else {
