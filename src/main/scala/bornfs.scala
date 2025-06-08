@@ -195,7 +195,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("The current dataset includes " + nSamples + " samples described by " +
       (maxAttr + 1) + " features identified by 0 through 5.")
     println("Each sample is labeled by an integer in [0, " + maxLabel + "].")
-    println("Samples with the same feature values and labels are agregated into a single case object, ")
+    println("Samples with the same feature values and labels are aggregated into a single case object, ")
     println("and the frequency of occurrence of each case object is counted.")
     println("The following are the case objects of the current dataset:")
     println
@@ -521,18 +521,18 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       println("it iterates selection of a single feature until it reaches a final answer.")
       println("Each iteration is associated with a search range, an ordered set of features.")
       println("The high efficiency of BornFS when selecting a feature from the search range is due to leverage of binary search.")
-      println("The search range shrinks as feature seelction proceeds.")
+      println("The search range shrinks as feature selection proceeds.")
       println("BornFS stops when the search range becomes empty and returns the features selected at the moment as a final answer.")
       println("Features in search ranges are sorted with the frequency specified by an option (-h).")
-      println("The frequency affects the quality of ouputs by and the time efficiency of BornFS.")
-      println("To be more specific, we can expect that the quality will improves and the time efficiency decreases with higher frequency.")
+      println("The frequency affects the quality of outputs by and the time efficiency of BornFS.")
+      println("To be more specific, we can expect that the quality will improve and the time efficiency decreases with higher frequency.")
       print("In this run of BornFS, ")
       if(hop == maxAttr + 1) {
         println("sorting features is executed only once at the first iteration.")
       } else {
         println("sorting features is executed every " + hop + " iterations.")
       }
-      println("\nNow, we let BornFS start feature selecion.")
+      println("\nNow, we let BornFS start feature selection.")
       println("In the following, we describe the operations performed in each iteration.")
     }
 
@@ -602,7 +602,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         print("The importance of a feature F at a position i ")
         print("in the sorted search range (F = Range[i]) ")
         println("is estimated by the ratio of:")
-        print("* Mutual information to lables of the features prior to F ")
+        print("* Mutual information to labels of the features prior to F ")
         print("plus the features selected so far = ")
         println("I(Range[0:i-1],Selected;Class); and")
         println("* Mutual information of the entire features to labels = I(Entire;Class).")
