@@ -177,7 +177,7 @@ object Main {
     })
     println("The minimum ratio of mutual information of selected features to the maximum is " + threshold + ".")
     if(hop == 0) {
-      println("Sorting features is executed onece at the beginning.")
+      println("Sorting features is executed once at the beginning.")
     } else {
       println("Sorting features is executed every " + hop + " iterations.")
     }
@@ -188,9 +188,9 @@ object Main {
       println("Tutorial mode is off.")
     }
     if(verbose){
-      println("States of execution will be displayed real time (vabose mode on).")
+      println("States of execution will be displayed real time (verbose mode on).")
     } else {
-      println("The program will run quietly (vabose mode off). ")
+      println("The program will run quietly (verbose mode off). ")
     }
     println
 
