@@ -17,7 +17,3 @@ assemblyMergeStrategy in assembly := {
 
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.19"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test
-
-// Disable running tests when building the fat JAR
-test in assembly := {}
-
