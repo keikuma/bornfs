@@ -135,7 +135,7 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
     }
   }
 
- def serialize: String = row.map{x =>x._1 + ">" + x._2}.mkString(":")
+  def serialize: String = row.map { x => s"${x._1}>${x._2}" }.mkString(":")
 
 }
 
@@ -201,8 +201,8 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("and the frequency of occurrence of each case object is counted.")
     println("The following are the case objects of the current dataset:")
     println
-    data.foreach{c =>
-      print((0 to maxAttr).map(a => a + ">" + c.value(a)).mkString(" "))
+    data.foreach { c =>
+      print((0 to maxAttr).map(a => s"$a>${c.value(a)}").mkString(" "))
       println(" label>" + c.classLabel + " frq>" + c.frq)
     }
     println
@@ -314,11 +314,11 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("- The entropy of the class variable H(Class) is " + f.format(entropyLabel) + ".")
     println("- The scores of entropy of individual features F are:")
     println
-    println("H(F)= " + (0 to maxAttr).map{i => i + ":" + f.format(entropyAttr(i))}.mkString(" "))
+    println("H(F)= " + (0 to maxAttr).map { i => s"$i:${f.format(entropyAttr(i))}" }.mkString(" "))
     println
     println("- The scores of mutual information of individual features to labels are:\n")
-    println("I(F;C)= " + (0 to maxAttr).map{
-      i => i + ":" + f.format(entropyAttr(i) + entropyLabel - entropyAttrLabel(i))}.mkString(" "))
+    println("I(F;C)= " + (0 to maxAttr).map {
+      i => s"$i:${f.format(entropyAttr(i) + entropyLabel - entropyAttrLabel(i))}" }.mkString(" "))
     println
     println("- The entropy of the entire features H(Entire) is " + f.format(entropyEntire) + ".")
     println("- The mutual information of the entire features to labels I(Entire;Class) is " +
@@ -489,7 +489,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         case _ =>
       }
       println("The features of the current search range are sorted to:\n")
-      println((0 to lim).map{i => entity(i) + "(" + f.format(tmp(i)._2) + ")"}.mkString(""," ","\n"))
+      println((0 to lim).map { i => s"${entity(i)}(${f.format(tmp(i)._2)})" }.mkString("", " ", "\n"))
       print("A figure in parentheses indicates ")
       sort match {
         case 0 =>
@@ -595,7 +595,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           p.foreach{i =>
             val c = data(i)
             print((prefix ++ (0 to lim)).map(a =>
-              entity(a) + ">" + c.value(entity(a))).mkString(" "))
+              s"${entity(a)}>${c.value(entity(a))}").mkString(" "))
             println(" label>" + c.classLabel + " frq>" + c.frq)
           }
         }
@@ -611,8 +611,8 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
         println("The importance indices to select a feature are computed as: ")
         println
-        println((0 to lim).map{i =>
-          entity(i) + ":" + f.format(ratio(i-1))}.mkString(""," ","\n"))
+        println((0 to lim).map { i =>
+          s"${entity(i)}:${f.format(ratio(i-1))}" }.mkString("", " ", "\n"))
         println("BornFS selects the right-most feature subject to the condition that the ratio is smaller than the given threshold, in this case, " + delta + ".")
       }
 

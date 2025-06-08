@@ -258,7 +258,7 @@ object Main {
     // println("<<DEBUG")
 
     println
-    println(result.size + " features have been selected.")
+    println(s"${result.size} features have been selected.")
     println
     println("Selected features are: " + selected_attrs.mkString(" "))
 
