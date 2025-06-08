@@ -371,7 +371,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
     val (h, hc) = entropyPrefixPlusUntil(i)
 
-    (entropyLabel + h - hc)/miEntireLabel
+    if(isZero(miEntireLabel)) 0.0 else (entropyLabel + h - hc)/miEntireLabel
   }
 
   def findBorder(delta: Double, lim: Index): Int = {
@@ -645,8 +645,12 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           println("* Relevance I(Selected;Class) = " + f.format(relevance) + ";")
           println("* Noise H(Selected|Class) = " + f.format(noise) + ".")
           println("The harmonic and geometric means of I(S;C)/I(E;C) and I(S;C)/H(FS) are computed as:")
-          println("* mu_H = " + f.format(2 * relevance/(miEntireLabel + entropyPrefix)) + ";")
-          println("* mu_G = " + f.format(relevance/math.sqrt(miEntireLabel * entropyPrefix)) + ".")
+          val denomH = miEntireLabel + entropyPrefix
+          val denomG = miEntireLabel * entropyPrefix
+          val mu_H = if(isZero(denomH)) 0.0 else 2 * relevance/denomH
+          val mu_G = if(isZero(denomG)) 0.0 else relevance/math.sqrt(denomG)
+          println("* mu_H = " + f.format(mu_H) + ";")
+          println("* mu_G = " + f.format(mu_G) + ".")
         } else if(verbose) {
           print("." + entity(i) + ".")
         }
