@@ -22,7 +22,7 @@ case class MainOption(
   out: String = "",
   log: String = "low",
   sort: String = "ratio",
-  tutorial: Boolean = false, 
+  tutorial: Boolean = false,
   verbose: Boolean = true
 )
 
@@ -260,7 +260,7 @@ object Main {
     println
     println(s"${result.size} features have been selected.")
     println
-    println("Selected features are: " + selected_attrs.mkString(" "))
+    println("Selected features are: " + selected_attrs.map(_.name).mkString(" "))
 
    // println("\nSelected attributes: feature name (score and rank in " + ds.slm(sort_selector(sort)) + ")")
    //  for (attr <- result) {
@@ -322,7 +322,7 @@ object Main {
 
       log_file.write("\n# " + selected_attrs.size + "features selected.\n")
       log_file.write("# Selected features\n")
-      log_file.write(selected_attrs.mkString(""," ","\n"))
+      log_file.write(selected_attrs.map(_.name).mkString(""," ","\n"))
 
       log_file.write("\n# Statistics\n")
       log_file.write("## Number of instances = " + db.numInstances + "\n")

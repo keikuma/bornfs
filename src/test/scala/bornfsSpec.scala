@@ -32,7 +32,7 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("selected features for test.arff are stable") {
     println
-    println(result.size + " features have been selected.")
+    println(result.size.toString + " features have been selected.")
     println
     println("Selected features are: " + selected_attrs.map(_.name).mkString(" "))
     selected_attrs shouldBe expected_attrs
