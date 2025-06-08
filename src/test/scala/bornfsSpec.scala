@@ -38,3 +38,4 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     selected_attrs shouldBe expected_attrs
   }
 }
+
