@@ -5,10 +5,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable
 
 class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
-  
+
   var result: Seq[scwc.Attr] = _
   var selected_attrs: List[Symbol] = _
-  val expected_attrs: List[Symbol] = List('a, 'c, 'f)
+  val expected_attrs: List[Symbol] = List(Symbol("a"), Symbol("c"), Symbol("f"))
 
   override def beforeAll(): Unit = {
     val path: String = "data/test.arff"
@@ -34,7 +34,7 @@ class DataSetupTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     println
     println(result.size + " features have been selected.")
     println
-    println("Selected features are: " + selected_attrs.mkString(" "))
+    println("Selected features are: " + selected_attrs.map(_.name).mkString(" "))
     selected_attrs shouldBe expected_attrs
   }
 }
