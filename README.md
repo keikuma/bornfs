@@ -20,6 +20,11 @@ Ensure you have the following installed before running the project:
 - Java `JDK 11`
 - [SBT](https://www.scala-sbt.org/) (Scala Build Tool)
 
+## Data Requirements
+
+BornFS assumes that feature values are discrete. In particular, best results are
+obtained when each feature takes binary values (0 or 1).
+
 ## Installation
 
 ### Clone the Repository

@@ -116,7 +116,12 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
         x._1 - y._1 match {
           case diff if diff < 0 => return 1
           case diff if diff > 0 => return -1
-          case _ => i += 1
+          case _ =>
+            x._2 - y._2 match {
+              case diff if diff < 0 => return 1
+              case diff if diff > 0 => return -1
+              case _ => i += 1
+            }
         }
       } else {
         return if(y._1 <= index) -1 else 0
@@ -552,7 +557,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
       var sorted, order = (0 to lim).toArray
 
-      if(hop > 0 & it_count % hop == 0) {
+      if(hop > 0 && it_count % hop == 0) {
         val tempResult = sortAttrs
         sorted = tempResult._1
         order = tempResult._2
