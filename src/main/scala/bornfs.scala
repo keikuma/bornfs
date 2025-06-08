@@ -97,7 +97,9 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
       temp.append((order(p._1), p._2))
       i += 1
     }
-    window = temp.sortWith(_._1 < _._1)
+    // Ensure the window is sorted by the new index order
+    // so that subsequent binary searches behave correctly.
+    window = temp.sortBy(_._1)
   }
 
   def compare(that: Case, index: Index): Int = {
