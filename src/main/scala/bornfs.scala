@@ -1,5 +1,7 @@
 import scwc._
 import collection.mutable.{ArrayBuffer, HashMap}
+import scala.collection.mutable
+import scala.collection.parallel.CollectionConverters._
 import java.text.DecimalFormat
 
 
@@ -81,7 +83,7 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
   }
 
 
-  def renumber(order: Array[Index]) {
+  def renumber(order: Array[Index]): Unit = {
     /*
      order(i)は、現在のwindow中のインデックスiの特徴の、新たなwindowにおけるインデックス
      orderは、0, ..., rs-1の順列
@@ -95,7 +97,9 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
       temp.append((order(p._1), p._2))
       i += 1
     }
-    window = temp.sortWith(_._1 < _._1)
+    // Ensure the window is sorted by the new index order
+    // so that subsequent binary searches behave correctly.
+    window = temp.sortBy(_._1)
   }
 
   def compare(that: Case, index: Index): Int = {
@@ -114,7 +118,12 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
         x._1 - y._1 match {
           case diff if diff < 0 => return 1
           case diff if diff > 0 => return -1
-          case _ => i += 1
+          case _ =>
+            x._2 - y._2 match {
+              case diff if diff < 0 => return 1
+              case diff if diff > 0 => return -1
+              case _ => i += 1
+            }
         }
       } else {
         return if(y._1 <= index) -1 else 0
@@ -128,7 +137,7 @@ case class Case(var row: ArrayBuffer[(Attr,Value)], val classLabel: Value, val f
     }
   }
 
- def serialize: String = row.map{x =>x._1 + ">" + x._2}.mkString(":")
+  def serialize: String = row.map { x => s"${x._1}>${x._2}" }.mkString(":")
 
 }
 
@@ -153,17 +162,19 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("Let's learn about how BornFS works.")
   }
 
-  var temp_dict = collection.mutable.Map[(ArrayBuffer[(Attr, Value)], Value), Int]()
-  for(x <- raw_data) {
-    val y = (x._1.sortWith(_._1 < _._1), x._2)
-    if(temp_dict.isDefinedAt(y)) {
-      temp_dict(y) += 1
+  // Aggregate identical cases while ensuring each case's feature list is
+  // consistently ordered by attribute index.
+  val temp_dict = collection.mutable.Map[(ArrayBuffer[(Attr, Value)], Value), Int]()
+  for (x <- raw_data) {
+    val orderedCase = (x._1.sortBy(_._1), x._2)
+    if (temp_dict.isDefinedAt(orderedCase)) {
+      temp_dict(orderedCase) += 1
     } else {
-      temp_dict(y) = 1
+      temp_dict(orderedCase) = 1
     }
   }
 
-  val data = temp_dict.par.map{x => Case(x._1._1, x._1._2, x._2)}.to[ArrayBuffer]
+  val data = temp_dict.par.map{x => Case(x._1._1, x._1._2, x._2)}.to(mutable.ArrayBuffer)
   val maxAttr = data.par.map(_.row).par.flatMap{x => x.map(_._1)}.max
   val maxVal = (0 to maxAttr).par.map{a => data.map(_(a)).max}
   val maxLabel = data.par.map(_.classLabel).max
@@ -188,12 +199,12 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("The current dataset includes " + nSamples + " samples described by " +
       (maxAttr + 1) + " features identified by 0 through 5.")
     println("Each sample is labeled by an integer in [0, " + maxLabel + "].")
-    println("Samples with the same feature values and labels are agregated into a single case object, ")
+    println("Samples with the same feature values and labels are aggregated into a single case object, ")
     println("and the frequency of occurrence of each case object is counted.")
     println("The following are the case objects of the current dataset:")
     println
-    data.foreach{c =>
-      print((0 to maxAttr).map(a => a + ">" + c.value(a)).mkString(" "))
+    data.foreach { c =>
+      print((0 to maxAttr).map(a => s"$a>${c.value(a)}").mkString(" "))
       println(" label>" + c.classLabel + " frq>" + c.frq)
     }
     println
@@ -202,7 +213,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("- label>[l] indicates a class label l;")
     println("- frq>[n] indicates an occurrence frequency n.")
   }
-  
+
   def log2(x: Double): Double = math.log(x)/math.log(2)
   def xlog2(x: Double): Double = if(x == 0) 0 else x*log2(x)
 
@@ -275,7 +286,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
   val entropyEntire = count.values.filter(_ > 0).par.map{x => -x*log2(x)}.sum/nSamples + log2(nSamples)
 
-  
+
   count = HashMap[String, Int]()
   for(c <- data) {
     val pttn = c.serialize + "=" + c.classLabel
@@ -285,7 +296,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       count(pttn) = c.frq
     }
   }
-  
+
   val entropyEntireLabel = count.values.filter(_ > 0).par.map{x => -x*log2(x)}.sum/nSamples + log2(nSamples)
 
 
@@ -305,26 +316,26 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     println("- The entropy of the class variable H(Class) is " + f.format(entropyLabel) + ".")
     println("- The scores of entropy of individual features F are:")
     println
-    println("H(F)= " + (0 to maxAttr).map{i => i + ":" + f.format(entropyAttr(i))}.mkString(" "))
+    println("H(F)= " + (0 to maxAttr).map { i => s"$i:${f.format(entropyAttr(i))}" }.mkString(" "))
     println
     println("- The scores of mutual information of individual features to labels are:\n")
-    println("I(F;C)= " + (0 to maxAttr).map{
-      i => i + ":" + f.format(entropyAttr(i) + entropyLabel - entropyAttrLabel(i))}.mkString(" "))
+    println("I(F;C)= " + (0 to maxAttr).map {
+      i => s"$i:${f.format(entropyAttr(i) + entropyLabel - entropyAttrLabel(i))}" }.mkString(" "))
     println
     println("- The entropy of the entire features H(Entire) is " + f.format(entropyEntire) + ".")
     println("- The mutual information of the entire features to labels I(Entire;Class) is " +
       f.format(miEntireLabel) + ".")
   }
 
-  def initializePrefix {
+  def initializePrefix(): Unit = {
     prefix = ArrayBuffer[Attr]()
     partitions = Array[Seq[Int]](0 until nCases)
     entropyPrefix = 0.0
     entropyPrefixLabel = entropyLabel
   }
 
-  
-  def addPrefix(index: Index) {
+
+  def addPrefix(index: Index): Unit = {
     prefix += index
     lim = index - 1
 
@@ -332,11 +343,11 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
      各partitionをindexをインデックスに持つ特徴の値で再分割し、partitionsを更新
      */
 
-    partitions = partitions.par.map{p =>
-      val temp = Vector.fill(maxVal(entity(index))+1)(ArrayBuffer[Int]())
-      for(i <- p) temp(data(i)(index)) += i
-      temp.filter(_.size > 0)
-    }.flatMap(x => x).toArray
+      partitions = partitions.par.map { p =>
+        val temp = Vector.fill(maxVal(entity(index)) + 1)(ArrayBuffer[Int]())
+        for (i <- p) temp(data(i)(index)) += i
+        temp.filter(_.nonEmpty).map(_.toSeq)
+      }.flatMap(x => x).toArray
     val tmp = entropyPrefixPlusUntil(-1)
     entropyPrefix = tmp._1
     entropyPrefixLabel = tmp._2
@@ -344,8 +355,8 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
   def nSamples(indices: Seq[Int]): Int = indices.foldLeft(0)(_+data(_).frq)
 
-  def sortCases {
-    
+  def sortCases(): Unit = {
+
     /*
      partitionごとに、[0,lim]の属性のの辞書式順序にcaseをソート
      ソートした結果でpartitionsを更新
@@ -364,21 +375,21 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
     val (h, hc) = entropyPrefixPlusUntil(i)
 
-    (entropyLabel + h - hc)/miEntireLabel
+    if(isZero(miEntireLabel)) 0.0 else (entropyLabel + h - hc)/miEntireLabel
   }
 
   def findBorder(delta: Double, lim: Index): Int = {
-    
+
     /*
      I(attrs[i, attrs.size-1], prefix; C) >= delta I(entire, C) が成り立つ
      最大のiをbinary searchで探索して、出力する。
-     
+
      以下では、
-     I(attrs[u, attrs.size-1], prefix; C) < delta I(entire; C) 
-     I(attrs[l, attrs.size-1], prefix; C) >= delta I(entire; C) 
+     I(attrs[u, attrs.size-1], prefix; C) < delta I(entire; C)
+     I(attrs[l, attrs.size-1], prefix; C) >= delta I(entire; C)
      が成り立つように、l(ower)とu(pper)を制御
 
-     I(attrs[attrs.size, attrs.size-1], prefix; C) >= delta I(entire; C) 
+     I(attrs[attrs.size, attrs.size-1], prefix; C) >= delta I(entire; C)
      をチェックし、成り立てば、u = attrs.size と初期化する。
      */
 
@@ -393,12 +404,12 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
     var l = -1
 
     /*
-     I([0, lim], prefix; C) >= delta I(entire; C) 
+     I([0, lim], prefix; C) >= delta I(entire; C)
      は成り立つものと仮定できるので、u = lim と初期化する。
      */
 
     var u = lim
-    
+
     while(true) {
       if(l + 1 == u) return u
       val c = (l + u)/2
@@ -412,7 +423,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       }
     }
     // エラーを回避するためのダミー出力
-    
+
     return 0
   }
 
@@ -480,7 +491,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         case _ =>
       }
       println("The features of the current search range are sorted to:\n")
-      println((0 to lim).map{i => entity(i) + "(" + f.format(tmp(i)._2) + ")"}.mkString(""," ","\n"))
+      println((0 to lim).map { i => s"${entity(i)}(${f.format(tmp(i)._2)})" }.mkString("", " ", "\n"))
       print("A figure in parentheses indicates ")
       sort match {
         case 0 =>
@@ -499,7 +510,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
     // lim = maxAttr
     // var range = (0 to maxAttr).toArray
-    initializePrefix
+    initializePrefix()
 
     if(tutorial) {
       println("\nThe following is a high-level description of BornFS.\n")
@@ -514,18 +525,18 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       println("it iterates selection of a single feature until it reaches a final answer.")
       println("Each iteration is associated with a search range, an ordered set of features.")
       println("The high efficiency of BornFS when selecting a feature from the search range is due to leverage of binary search.")
-      println("The search range shrinks as feature seelction proceeds.")
+      println("The search range shrinks as feature selection proceeds.")
       println("BornFS stops when the search range becomes empty and returns the features selected at the moment as a final answer.")
       println("Features in search ranges are sorted with the frequency specified by an option (-h).")
-      println("The frequency affects the quality of ouputs by and the time efficiency of BornFS.")
-      println("To be more specific, we can expect that the quality will improves and the time efficiency decreases with higher frequency.")
+      println("The frequency affects the quality of outputs by and the time efficiency of BornFS.")
+      println("To be more specific, we can expect that the quality will improve and the time efficiency decreases with higher frequency.")
       print("In this run of BornFS, ")
       if(hop == maxAttr + 1) {
         println("sorting features is executed only once at the first iteration.")
       } else {
         println("sorting features is executed every " + hop + " iterations.")
       }
-      println("\nNow, we let BornFS start feature selecion.")
+      println("\nNow, we let BornFS start feature selection.")
       println("In the following, we describe the operations performed in each iteration.")
     }
 
@@ -550,28 +561,28 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
 
       var sorted, order = (0 to lim).toArray
 
-      if(hop > 0 & it_count % hop == 0) {
+      if(hop > 0 && it_count % hop == 0) {
         val tempResult = sortAttrs
         sorted = tempResult._1
         order = tempResult._2
 
         ellapsed_t = System.nanoTime() - start
-        events += Pair('sortAttrs, Array(ellapsed_t, lim))
+        events += ((Symbol("sortAttrs"), Array(ellapsed_t, lim)))
         timeSortFeatures += ellapsed_t
 
         start = System.nanoTime()
 
-        sortCases
+        sortCases()
 
         ellapsed_t = System.nanoTime() - start
-        events += Pair('sortCases, Array(ellapsed_t, lim))
+        events += ((Symbol("sortCases"), Array(ellapsed_t, lim)))
         timeSortInstances += ellapsed_t
       } else if (tutorial) {
         println("This iteration does not perform sorting features.")
       }
 
       it_count += 1
-      
+
       if(tutorial) {
         println("The iteration is also associated with one or more partitions.")
         println("Each case object of the dataset belongs to exactly one partition.")
@@ -586,7 +597,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           p.foreach{i =>
             val c = data(i)
             print((prefix ++ (0 to lim)).map(a =>
-              entity(a) + ">" + c.value(entity(a))).mkString(" "))
+              s"${entity(a)}>${c.value(entity(a))}").mkString(" "))
             println(" label>" + c.classLabel + " frq>" + c.frq)
           }
         }
@@ -595,15 +606,15 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
         print("The importance of a feature F at a position i ")
         print("in the sorted search range (F = Range[i]) ")
         println("is estimated by the ratio of:")
-        print("* Mutual information to lables of the features prior to F ")
+        print("* Mutual information to labels of the features prior to F ")
         print("plus the features selected so far = ")
         println("I(Range[0:i-1],Selected;Class); and")
         println("* Mutual information of the entire features to labels = I(Entire;Class).")
 
         println("The importance indices to select a feature are computed as: ")
         println
-        println((0 to lim).map{i =>
-          entity(i) + ":" + f.format(ratio(i-1))}.mkString(""," ","\n"))
+        println((0 to lim).map { i =>
+          s"${entity(i)}:${f.format(ratio(i-1))}" }.mkString("", " ", "\n"))
         println("BornFS selects the right-most feature subject to the condition that the ratio is smaller than the given threshold, in this case, " + delta + ".")
       }
 
@@ -612,7 +623,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
       val i = findBorder(delta, lim)
 
       ellapsed_t = System.nanoTime() - start
-      events += Pair('findBorder, Array(ellapsed_t, lim))
+        events += ((Symbol("findBorder"), Array(ellapsed_t, lim)))
       timeSelectFeatures += ellapsed_t
 
       if(i < 0) {
@@ -625,7 +636,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           println("<< Tutorial finishes.  Thank you!")
         }
 
-        return prefix
+          return prefix.toSeq
       } else {
         addPrefix(i)
 
@@ -638,8 +649,12 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
           println("* Relevance I(Selected;Class) = " + f.format(relevance) + ";")
           println("* Noise H(Selected|Class) = " + f.format(noise) + ".")
           println("The harmonic and geometric means of I(S;C)/I(E;C) and I(S;C)/H(FS) are computed as:")
-          println("* mu_H = " + f.format(2 * relevance/(miEntireLabel + entropyPrefix)) + ";")
-          println("* mu_G = " + f.format(relevance/math.sqrt(miEntireLabel * entropyPrefix)) + ".")
+          val denomH = miEntireLabel + entropyPrefix
+          val denomG = miEntireLabel * entropyPrefix
+          val mu_H = if(isZero(denomH)) 0.0 else 2 * relevance/denomH
+          val mu_G = if(isZero(denomG)) 0.0 else relevance/math.sqrt(denomG)
+          println("* mu_H = " + f.format(mu_H) + ";")
+          println("* mu_G = " + f.format(mu_G) + ".")
         } else if(verbose) {
           print("." + entity(i) + ".")
         }
@@ -653,7 +668,7 @@ case class Dataset(raw_data: Seq[(ArrayBuffer[(Attr, Value)], Value)], sort: Int
             println("<< Tutorial finishes.  Thank you!")
           }
 
-          return prefix.map(entity(_))
+          return prefix.map(entity(_)).toSeq
         }
       }
     }

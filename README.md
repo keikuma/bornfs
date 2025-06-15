@@ -1,6 +1,6 @@
 # BornFS
 
-![Scala](https://img.shields.io/badge/Scala-2.12-red.svg)
+![Scala](https://img.shields.io/badge/Scala-3.x-red.svg)
 
 ## Overview
 
@@ -16,9 +16,14 @@ It efficiently selects a subset of relevant features from a large dataset while 
 ## Prerequisites
 
 Ensure you have the following installed before running the project:
-- Scala `2.12.x`
+- Scala `3.3.x`
 - Java `JDK 11`
 - [SBT](https://www.scala-sbt.org/) (Scala Build Tool)
+
+## Data Requirements
+
+BornFS assumes that feature values are discrete. In particular, best results are
+obtained when each feature takes binary values (0 or 1).
 
 ## Installation
 
